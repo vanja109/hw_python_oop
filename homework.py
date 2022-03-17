@@ -1,5 +1,9 @@
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Dict, List
+
+SWM_TYPE = "SWM"
+RUN_TYPE = "RUN"
+WLK_TYPE = "WLK"
 
 
 @dataclass
@@ -11,12 +15,17 @@ class InfoMessage:
     distance: float
     speed: float
     calories: float
-    MESSAGE: str = ("Тип тренировки: {}; Длительность: "
-                    "{:.3f} ч.; Дистанция: {:.3f} км; Ср. скорость: "
-                    "{:.3f} км/ч; Потрачено ккал: {:.3f}.")
+    MESSAGE: str = field(
+        default=(
+            "Тип тренировки: {training_type}; "
+            "Длительность: {duration:.3f} ч.; "
+            "Дистанция: {distance:.3f} км; "
+            "Ср. скорость: {speed:.3f} км/ч; "
+            "Потрачено ккал: {calories:.3f}."),
+        init=False)
 
     def get_message(self):
-        return self.MESSAGE.format(*asdict(self).values())
+        return self.MESSAGE.format(**asdict(self))
 
 
 class Training:
@@ -49,7 +58,7 @@ class Training:
     def show_training_info(self) -> InfoMessage:
         """Вернуть информационное сообщение о выполненной тренировке."""
         return InfoMessage(
-            self.__class__.__name__,
+            type(self).__name__,
             self.duration,
             self.get_distance(),
             self.get_mean_speed(),
@@ -140,10 +149,11 @@ def main(training: Training) -> None:
 
 
 if __name__ == "__main__":
+
     packages: List[str, int] = [
-        ("SWM", [720, 1, 80, 25, 40]),
-        ("RUN", [15000, 1, 75]),
-        ("WLK", [9000, 1, 75, 180]),
+        (SWM_TYPE, [720, 1, 80, 25, 40]),
+        (RUN_TYPE, [15000, 1, 75]),
+        (WLK_TYPE, [9000, 1, 75, 180]),
     ]
 
     for workout_type, data in packages:
