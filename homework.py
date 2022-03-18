@@ -1,5 +1,5 @@
 from dataclasses import asdict, dataclass, field
-from typing import Dict, List
+from typing import Dict, List, Type
 
 SWM_TYPE = "SWM"
 RUN_TYPE = "RUN"
@@ -21,8 +21,8 @@ class InfoMessage:
             "Длительность: {duration:.3f} ч.; "
             "Дистанция: {distance:.3f} км; "
             "Ср. скорость: {speed:.3f} км/ч; "
-            "Потрачено ккал: {calories:.3f}."),
-        init=False)
+            "Потрачено ккал: {calories:.3f}."
+        ), init=False)
 
     def get_message(self):
         return self.MESSAGE.format(**asdict(self))
@@ -53,7 +53,7 @@ class Training:
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        raise NotImplementedError("Ошибка. Метод неопределен")
+        raise NotImplementedError()
 
     def show_training_info(self) -> InfoMessage:
         """Вернуть информационное сообщение о выполненной тренировке."""
@@ -67,19 +67,25 @@ class Training:
 
 class Running(Training):
     """Тренировка: бег."""
+
+    COEFF_CALORIE_MULTIPLIER: int = 18
+    COEFF_CALORIE_SUBTRACTER: int = 20
+
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
 
-        COEFF_CALORIE_MULTIPLY: int = 18
-        COEFF_CALORIE_SUBTRACT: int = 20
         return (
-            (COEFF_CALORIE_MULTIPLY * self.get_mean_speed()
-             - COEFF_CALORIE_SUBTRACT) * self.weight
+            (self.COEFF_CALORIE_MULTIPLIER * self.get_mean_speed()
+             - self.COEFF_CALORIE_SUBTRACTER) * self.weight
             / self.M_IN_KM * self.duration * self.MIN_IN_H)
 
 
 class SportsWalking(Training):
     """Тренировка: спортивная ходьба."""
+
+    COEFF_CALORIE_SUMMAND: float = 0.035
+    COEFF_CALORIE_MULTIPLIER: float = 0.029
+
     def __init__(self,
                  action: int,
                  duration: float,
@@ -91,18 +97,19 @@ class SportsWalking(Training):
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        COEFF_CALORIE_ADD: float = 0.035
-        COEFF_CALORIE_MULTIPLY: float = 0.029
+
         return (
-            (COEFF_CALORIE_ADD * self.weight + (self.get_mean_speed() ** 2
-             // self.height) * COEFF_CALORIE_MULTIPLY * self.weight)
-            * self.duration * self.MIN_IN_H)
+            (self.COEFF_CALORIE_SUMMAND * self.weight + (self.get_mean_speed()
+             ** 2 // self.height) * self.COEFF_CALORIE_MULTIPLIER
+             * self.weight) * self.duration * self.MIN_IN_H)
 
 
 class Swimming(Training):
     """Тренировка: плавание."""
 
     LEN_STEP: float = 1.38
+    COEFF_CALORIE_SUMMAND: float = 1.1
+    COEFF_CALORIE_MULTIPLIER: int = 2
 
     def __init__(self,
                  action: int,
@@ -122,20 +129,18 @@ class Swimming(Training):
 
     def get_spent_calories(self) -> float:
         """Получить количество затраченных калорий."""
-        COEFF_CALORIE_ADD: float = 1.1
-        COEFF_CALORIE_MULTIPLY: int = 2
         return (
-            (self.get_mean_speed() + COEFF_CALORIE_ADD)
-            * COEFF_CALORIE_MULTIPLY * self.weight)
+            (self.get_mean_speed() + self.COEFF_CALORIE_SUMMAND)
+            * self.COEFF_CALORIE_MULTIPLIER * self.weight)
 
 
 def read_package(workout_type: str, data: List[int]) -> Training:
     """Прочитать данные полученные от датчиков."""
 
-    class_data: Dict[str, str] = {
-        "SWM": Swimming,
-        "RUN": Running,
-        "WLK": SportsWalking
+    class_data: Dict[str, Type[Training]] = {
+        SWM_TYPE: Swimming,
+        RUN_TYPE: Running,
+        WLK_TYPE: SportsWalking
     }
     if workout_type not in class_data.keys():
         raise ValueError("Неверный тип тренировки")
